@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Household" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon.png" />
+  <title>Household Spending</title>
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --card: #f5f1ea;
+      --ink: #1a2332;
+      --ink-soft: #6b7280;
+      --ink-muted: #9ca3af;
+      --track: #e5e0d6;
+      --fill: #7a6de0;
+      --fill-warn: #e8a34a;
+      --fill-over: #d94e4e;
+      --hero-a: #e8a4c9;
+      --hero-b: #c77bab;
+      --tab-active-bg: rgba(26, 35, 50, 0.08);
+      --chip-bg: rgba(26, 35, 50, 0.06);
+      --chip-active-bg: #1a2332;
+      --input-bg: rgba(255,255,255,0.7);
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      margin: 0; padding: 0;
+      background: var(--bg);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+      color: var(--ink);
+      min-height: 100vh;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .app { max-width: 440px; margin: 0 auto; padding: 16px 14px 40px; }
+    .card {
+      background: var(--card);
+      border-radius: 22px;
+      padding: 20px 20px 24px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+    }
+    .header h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+    .header .sub { color: var(--ink-soft); font-size: 13px; margin-top: 2px; }
+
+    .tabs {
+      display: flex; gap: 4px; margin: 16px 0 12px;
+      overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab {
+      flex-shrink: 0; padding: 8px 14px; text-align: center;
+      font-size: 13px; font-weight: 500; color: var(--ink-soft);
+      background: transparent; border: none; border-radius: 999px; cursor: pointer;
+      white-space: nowrap;
+    }
+    .tab.active { background: var(--tab-active-bg); color: var(--ink); font-weight: 600; }
+    .tab.empty { color: var(--ink-muted); font-style: italic; }
+
+    .hero {
+      background: linear-gradient(135deg, var(--hero-a), var(--hero-b));
+      border-radius: 16px; padding: 18px 18px 16px; color: white;
+      margin-bottom: 18px;
+    }
+    .hero .total { font-size: 36px; font-weight: 700; letter-spacing: -0.02em; }
+    .hero .of { font-size: 13px; opacity: 0.9; margin-top: 2px; }
+    .hero .bar {
+      background: rgba(255,255,255,0.35); height: 6px; border-radius: 999px; overflow: hidden;
+      margin: 14px 0 10px;
+    }
+    .hero .bar > span { display: block; height: 100%; background: white; border-radius: 999px; transition: width 0.4s; }
+    .hero .foot { font-size: 12px; opacity: 0.95; }
+
+    .row { padding: 12px 0; border-bottom: 1px solid rgba(0,0,0,0.06); }
+    .row:last-of-type { border-bottom: none; }
+    .row .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+    .row .name { font-size: 15px; font-weight: 600; }
+    .row .nums { font-size: 13px; color: var(--ink); font-variant-numeric: tabular-nums; }
+    .row .nums .spent { font-weight: 600; }
+    .row .nums .budget { color: var(--ink-soft); }
+    .row .bar {
+      background: var(--track); height: 4px; border-radius: 999px; overflow: hidden;
+      margin: 8px 0 4px;
+    }
+    .row .bar > span { display: block; height: 100%; background: var(--fill); border-radius: 999px; transition: width 0.4s; }
+    .row .bar > span.warn { background: var(--fill-warn); }
+    .row .bar > span.over { background: var(--fill-over); }
+    .row .left { font-size: 11px; color: var(--ink-soft); }
+    .row .left.over { color: var(--fill-over); font-weight: 600; }
+    .row .note { font-size: 11px; color: var(--ink-muted); margin-top: 4px; font-style: italic; }
+
+    .section-label {
+      font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: var(--ink-soft);
+      text-transform: uppercase; margin: 20px 0 8px;
+      display: flex; justify-content: space-between; align-items: baseline;
+    }
+    .section-label .count { text-transform: none; font-weight: 500; letter-spacing: 0; font-size: 11px; color: var(--ink-muted); }
+
+    .tx-controls { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+    .search {
+      width: 100%; padding: 10px 14px; font-size: 14px; border: none;
+      background: var(--input-bg); border-radius: 10px; color: var(--ink);
+      font-family: inherit;
+    }
+    .search:focus { outline: 2px solid var(--fill); outline-offset: -1px; }
+    .chips {
+      display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none;
+      -webkit-overflow-scrolling: touch; padding-bottom: 2px;
+    }
+    .chips::-webkit-scrollbar { display: none; }
+    .chip {
+      flex-shrink: 0; padding: 5px 10px; font-size: 11px; font-weight: 500;
+      background: var(--chip-bg); color: var(--ink); border: none; border-radius: 999px;
+      cursor: pointer; white-space: nowrap; font-family: inherit;
+    }
+    .chip.active { background: var(--chip-active-bg); color: white; }
+
+    .tx-list {
+      max-height: 60vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+      margin: 0 -4px; padding: 0 4px;
+    }
+    .tx { padding: 10px 0; display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid rgba(0,0,0,0.05); gap: 8px; }
+    .tx:last-child { border-bottom: none; }
+    .tx .left-col { min-width: 0; flex: 1; }
+    .tx .merchant { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tx .meta { font-size: 11px; color: var(--ink-muted); margin-top: 2px; }
+    .tx .tx-note { font-size: 10px; color: var(--ink-muted); font-style: italic; margin-top: 2px; }
+    .tx .amt { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+    .footer { text-align: center; font-size: 10px; color: #555; margin-top: 14px; }
+    .footer button {
+      background: transparent; color: #999; border: 1px solid #333;
+      border-radius: 999px; padding: 6px 12px; font-size: 11px; cursor: pointer;
+    }
+    .empty { padding: 40px 20px; text-align: center; color: var(--ink-soft); font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="card">
+      <div class="header">
+        <h1>Household Spending</h1>
+        <div class="sub" id="sub">Loading…</div>
+      </div>
+
+      <div class="tabs" id="tabs"></div>
+
+      <div id="hero"></div>
+      <div id="categories"></div>
+
+      <div class="section-label">
+        <span>Transactions</span>
+        <span class="count" id="tx-count"></span>
+      </div>
+      <div class="tx-controls" id="tx-controls" style="display:none">
+        <input type="search" class="search" id="tx-search" placeholder="Search merchant or note…" />
+        <div class="chips" id="tx-chips"></div>
+      </div>
+      <div class="tx-list" id="tx-list"></div>
+    </div>
+
+    <div class="footer">
+      <div style="margin-bottom:6px" id="refresh-info"></div>
+      <button onclick="location.reload()">Refresh</button>
+    </div>
+  </div>
+
+  <script>
+    const money = (n) => "$" + Math.round(n).toLocaleString();
+    const money2 = (n) => "$" + n.toFixed(2);
+
+    let DATA = null;
+    let CURRENT_MONTH_KEY = null;
+    let FILTER_QUERY = "";
+    let FILTER_CATEGORY = "All";
+
+    // --- Decryption (AES-256-CBC + PBKDF2-SHA256, matches openssl enc -aes-256-cbc -pbkdf2 -iter 210000 -md sha256 -salt -base64) ---
+    async function decryptOpenSSL(b64text, password) {
+      const raw = Uint8Array.from(atob(b64text.replace(/\s+/g, "")), c => c.charCodeAt(0));
+      // First 8 bytes = "Salted__", next 8 = salt, rest = ciphertext
+      const magic = new TextDecoder().decode(raw.slice(0, 8));
+      if (magic !== "Salted__") throw new Error("Bad file format");
+      const salt = raw.slice(8, 16);
+      const ct = raw.slice(16);
+      const enc = new TextEncoder();
+      const passKey = await crypto.subtle.importKey("raw", enc.encode(password), { name: "PBKDF2" }, false, ["deriveBits"]);
+      // Derive 48 bytes: 32 for AES-256 key + 16 for IV
+      const bits = await crypto.subtle.deriveBits(
+        { name: "PBKDF2", salt, iterations: 210000, hash: "SHA-256" },
+        passKey, 48 * 8
+      );
+      const keyBytes = new Uint8Array(bits, 0, 32);
+      const iv = new Uint8Array(bits, 32, 16);
+      const aesKey = await crypto.subtle.importKey("raw", keyBytes, { name: "AES-CBC" }, false, ["decrypt"]);
+      const pt = await crypto.subtle.decrypt({ name: "AES-CBC", iv }, aesKey, ct);
+      return new TextDecoder().decode(pt);
+    }
+
+    async function load() {
+      // Try to fetch encrypted file first, fall back to plaintext for local dev
+      let encRes;
+      try { encRes = await fetch("data.json.enc?t=" + Date.now()); } catch(e) { encRes = null; }
+      if (encRes && encRes.ok) {
+        const b64 = await encRes.text();
+        const pw = getPassword();
+        if (!pw) return promptPassword();
+        try {
+          const plain = await decryptOpenSSL(b64, pw);
+          DATA = JSON.parse(plain);
+        } catch (err) {
+          sessionStorage.removeItem("hb_pw");
+          return promptPassword("Wrong password — try again");
+        }
+      } else {
+        // Local dev fallback
+        const res = await fetch("data.json?t=" + Date.now());
+        DATA = await res.json();
+      }
+      const monthKeys = Object.keys(DATA.months).sort().reverse();
+      CURRENT_MONTH_KEY = monthKeys[0];
+      renderTabs(monthKeys);
+      render();
+      renderRefreshInfo();
+      wireSearch();
+    }
+
+    function getPassword() { return sessionStorage.getItem("hb_pw"); }
+
+    function promptPassword(msg) {
+      document.body.innerHTML = `
+        <div style="max-width:340px;margin:80px auto;padding:24px;background:#f5f1ea;border-radius:16px;font-family:-apple-system,sans-serif;color:#1a2332;">
+          <h2 style="margin:0 0 8px;font-size:18px">Household Spending</h2>
+          <p style="font-size:13px;color:#6b7280;margin:0 0 16px">${msg || "Enter password to view"}</p>
+          <form id="pwform">
+            <input id="pw" type="password" autofocus autocomplete="current-password"
+              style="width:100%;padding:10px 12px;border:1px solid #ccc;border-radius:8px;font-size:14px;box-sizing:border-box" />
+            <button type="submit" style="margin-top:12px;width:100%;padding:10px;background:#7a6de0;color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer">Unlock</button>
+          </form>
+        </div>
+      `;
+      document.getElementById("pwform").onsubmit = (e) => {
+        e.preventDefault();
+        const v = document.getElementById("pw").value;
+        sessionStorage.setItem("hb_pw", v);
+        location.reload();
+      };
+    }
+
+    function monthLabelShort(key, idx) {
+      const short = ["This mo.", "Last mo.", "2 mo. ago", "3 mo. ago", "4 mo. ago", "5 mo. ago"];
+      return short[idx] || DATA.months[key].label;
+    }
+
+    function renderTabs(monthKeys) {
+      const tabsEl = document.getElementById("tabs");
+      tabsEl.innerHTML = "";
+      monthKeys.forEach((key, i) => {
+        const m = DATA.months[key];
+        const btn = document.createElement("button");
+        const isEmpty = m.total_spent === null;
+        btn.className = "tab" + (key === CURRENT_MONTH_KEY ? " active" : "") + (isEmpty ? " empty" : "");
+        btn.textContent = monthLabelShort(key, i);
+        btn.onclick = () => {
+          CURRENT_MONTH_KEY = key;
+          FILTER_QUERY = ""; FILTER_CATEGORY = "All";
+          const s = document.getElementById("tx-search"); if (s) s.value = "";
+          render();
+          renderTabs(monthKeys);
+        };
+        tabsEl.appendChild(btn);
+      });
+    }
+
+    function render() {
+      const m = DATA.months[CURRENT_MONTH_KEY];
+      document.getElementById("sub").textContent = m.label;
+
+      if (m.total_spent === null) {
+        document.getElementById("hero").innerHTML = "";
+        document.getElementById("categories").innerHTML = `<div class="empty">${m.note || "No data for this month."}</div>`;
+        document.getElementById("tx-controls").style.display = "none";
+        document.getElementById("tx-list").innerHTML = "";
+        document.getElementById("tx-count").textContent = "";
+        return;
+      }
+
+      const pct = Math.min(100, (m.total_spent / m.total_budget) * 100);
+      const left = m.total_budget - m.total_spent;
+      const leftLabel = left >= 0
+        ? `${money(left)} left · ${m.days_left} days to go`
+        : `${money(-left)} over budget · ${m.days_left} days to go`;
+
+      document.getElementById("hero").innerHTML = `
+        <div class="hero">
+          <div class="total">${money(m.total_spent)}</div>
+          <div class="of">of ${money(m.total_budget)} budgeted</div>
+          <div class="bar"><span style="width:${pct}%"></span></div>
+          <div class="foot">${leftLabel}</div>
+        </div>
+      `;
+
+      const rows = m.categories.map(c => {
+        const budget = c.budget || 0;
+        const noteHtml = c.note ? `<div class="note">${c.note}</div>` : "";
+
+        if (c.tracking_only) {
+          return `
+            <div class="row">
+              <div class="top">
+                <div class="name">${c.name}</div>
+                <div class="nums"><span class="spent">${money2(c.spent)}</span> <span class="budget">tracking</span></div>
+              </div>
+              <div class="left">this month</div>
+              ${noteHtml}
+            </div>
+          `;
+        }
+        const p = budget > 0 ? (c.spent / budget) * 100 : (c.spent > 0 ? 100 : 0);
+        const cls = budget === 0 && c.spent > 0 ? "over" : p > 100 ? "over" : p > 85 ? "warn" : "";
+        const barPct = Math.min(100, p);
+        const leftAmt = budget - c.spent;
+        const leftText = budget === 0
+          ? "no budget set"
+          : leftAmt >= 0 ? `${money2(leftAmt)} left` : `${money2(-leftAmt)} over`;
+        const leftCls = budget > 0 && leftAmt < 0 ? "over" : "";
+        return `
+          <div class="row">
+            <div class="top">
+              <div class="name">${c.name}</div>
+              <div class="nums"><span class="spent">${money2(c.spent)}</span> <span class="budget">/ ${money(budget)}</span></div>
+            </div>
+            <div class="bar"><span class="${cls}" style="width:${barPct}%"></span></div>
+            <div class="left ${leftCls}">${leftText}</div>
+            ${noteHtml}
+          </div>
+        `;
+      }).join("");
+      document.getElementById("categories").innerHTML = rows;
+
+      document.getElementById("tx-controls").style.display = "flex";
+      renderChips(m);
+      renderTxList(m);
+    }
+
+    function renderChips(m) {
+      const cats = ["All", ...m.categories.map(c => c.name)];
+      const el = document.getElementById("tx-chips");
+      el.innerHTML = cats.map(c => {
+        const active = c === FILTER_CATEGORY ? " active" : "";
+        return `<button class="chip${active}" data-cat="${c}">${c}</button>`;
+      }).join("");
+      el.querySelectorAll(".chip").forEach(btn => {
+        btn.onclick = () => { FILTER_CATEGORY = btn.dataset.cat; renderChips(m); renderTxList(m); };
+      });
+    }
+
+    function renderTxList(m) {
+      const q = FILTER_QUERY.toLowerCase().trim();
+      const filtered = m.transactions.filter(t => {
+        if (FILTER_CATEGORY !== "All" && t.category !== FILTER_CATEGORY) return false;
+        if (!q) return true;
+        const hay = ((t.merchant || "") + " " + (t.note || "") + " " + (t.category || "")).toLowerCase();
+        return hay.includes(q);
+      });
+      const total = filtered.reduce((s, t) => s + t.amount, 0);
+      document.getElementById("tx-count").textContent =
+        `${filtered.length} of ${m.transactions.length} · ${money2(total)}`;
+
+      const html = filtered.map(t => `
+        <div class="tx">
+          <div class="left-col">
+            <div class="merchant">${t.merchant}</div>
+            <div class="meta">${t.date} · ${t.category}</div>
+            ${t.note ? `<div class="tx-note">${t.note}</div>` : ""}
+          </div>
+          <div class="amt">${money2(t.amount)}</div>
+        </div>
+      `).join("");
+      document.getElementById("tx-list").innerHTML =
+        html || `<div class="empty">No matching transactions.</div>`;
+    }
+
+    function wireSearch() {
+      const el = document.getElementById("tx-search");
+      el.addEventListener("input", () => {
+        FILTER_QUERY = el.value;
+        renderTxList(DATA.months[CURRENT_MONTH_KEY]);
+      });
+    }
+
+    function renderRefreshInfo() {
+      const gen = new Date(DATA.generated_at);
+      const now = new Date();
+      const mins = Math.round((now - gen) / 60000);
+      const ago = mins < 1 ? "just now" : mins < 60 ? `${mins} min ago` : `${Math.round(mins/60)} hr ago`;
+      const accts = DATA.accounts_included.map(a => "#" + a.mask).join(" + ");
+      document.getElementById("refresh-info").textContent = `Data updated ${ago} · Accounts ${accts}`;
+    }
+
+    load().catch(err => {
+      document.getElementById("sub").textContent = "Error loading data";
+      console.error(err);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+# Raw data — never push
+data.json
+build.py
+RULEBOOK.md
+raw_transactions.json
+
+# Password file
+.password
+
+# Python
+__pycache__/
+*.pyc
